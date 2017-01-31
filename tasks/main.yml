@@ -1,0 +1,32 @@
+- name: Install dovecot
+  apt: name=dovecot-imapd state=latest
+
+- name: configure dovecot
+  lineinfile: >
+    dest='/etc/dovecot/conf.d/{{ item.file }}'
+    regexp='{{ item.reg }}'
+    line='{{ item.line }}'
+    state=present
+  with_items:
+    - file: '10-auth.conf'
+      reg: '^auth_mechanisms'
+      line: 'auth_mechanisms = plain login'
+    - file: '10-logging.conf'
+      reg: '^verbose_ssl'
+      line: 'verbose_ssl = no'
+    - file: '10-mail.conf'
+      reg: '^mail_location'
+      line: 'mail_location = maildir:~/Maildir'
+  notify: restart dovecot
+
+- name: install dovecot configuration templates
+  template: src={{ item }}.j2 dest=/etc/dovecot/conf.d/{{ item }}
+  with_items:
+  - 10-master.conf
+  - 10-ssl.conf
+  notify: restart dovecot
+
+- name: configure imaps port in ufw
+  ufw: rule=allow port=imaps proto=tcp
+  notify: restart ufw
+
